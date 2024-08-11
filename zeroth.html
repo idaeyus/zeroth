@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>zeroth</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/ruby/ruby.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/go/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/php/php.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/rust/rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/swift/swift.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/kotlin/kotlin.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            height: 100%;
+            overflow: hidden;
+        }
+        .container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        #editor-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        .editor {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 40px;
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .CodeMirror {
+            height: 100%;
+            font-size: 14px;
+            background-color: transparent !important;
+            color: white !important;
+        }
+        .CodeMirror-gutters {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        .CodeMirror-linenumber {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+        .CodeMirror-cursor {
+            border-left: 2px solid white !important;
+        }
+        #api-key-modal, #run-result-modal, #language-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #222;
+            padding: 30px;
+            border-radius: 15px;
+            z-index: 1000;
+            display: none;
+            width: 400px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #api-key-input, #run-result, #language-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #333;
+            color: #fff;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        #api-key-input:focus, #run-result:focus, #language-select:focus {
+            outline: none;
+            border-color: #666;
+        }
+        #bottom-bar {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+            background-color: rgba(17, 17, 17, 0.7);
+            border-radius: 5px;
+            padding: 5px;
+        }
+        #status-bar {
+            color: white;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        #controls {
+            display: flex;
+            gap: 5px;
+        }
+        button, select {
+            min-width: 30px;
+            height: 30px;
+            background-color: rgba(51, 51, 51, 0.7);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+        }
+        button:hover, select:hover {
+            background-color: rgba(68, 68, 68, 0.7);
+        }
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        #run-result {
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        #zeroth {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            z-index: 1000;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .modal-buttons button {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    <div class="container">
+        <div id="editor-container">
+            <div class="editor" id="input-editor"></div>
+            <div class="editor" id="output-editor" style="opacity: 0; pointer-events: none;"></div>
+        </div>
+        <div id="bottom-bar">
+            <div id="status-bar"></div>
+            <div id="controls">
+                <button id="toggle-view" title="Toggle View">TV</button>
+                <button id="convert-btn" title="Convert Code">CV</button>
+                <button id="toggle-api-key" title="Show API Key">API</button>
+                <button id="download-input" title="Download Input">DI</button>
+                <button id="download-output" title="Download Output">DO</button>
+                <button id="run-code" title="Run Code">RUN</button>
+                <button id="stop-code" title="Stop Code" style="display: none;">STOP</button>
+                <button id="toggle-language" title="Select Language">LN</button>
+            </div>
+        </div>
+    </div>
+    <div id="zeroth">zeroth</div>
+    <div id="api-key-modal">
+        <h3>Enter Gemini API Key</h3>
+        <input type="password" id="api-key-input" placeholder="Enter your Gemini API key">
+        <div class="modal-buttons">
+            <button id="toggle-api-key-visibility">Show API Key</button>
+            <button id="save-api-key">Save</button>
+            <button id="close-api-key">Close</button>
+        </div>
+    </div>
+    <div id="run-result-modal">
+        <h3>Code Execution Result</h3>
+        <pre id="run-result"></pre>
+        <div class="modal-buttons">
+            <button id="close-run-result">Close</button>
+        </div>
+    </div>
+    <div id="language-modal">
+        <h3>Select Target Language</h3>
+        <select id="language-select">
+            <option value="python">Python</option>
+            <option value="web">Web (HTML, CSS, JS)</option>
+            <option value="java">Java</option>
+            <option value="cpp">C++</option>
+            <option value="csharp">C#</option>
+            <option value="ruby">Ruby</option>
+            <option value="go">Go</option>
+            <option value="php">PHP</option>
+            <option value="rust">Rust</option>
+            <option value="swift">Swift</option>
+            <option value="kotlin">Kotlin</option>
+        </select>
+        <div class="modal-buttons">
+            <button id="save-language">Save</button>
+            <button id="close-language">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('bg-canvas'), alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 10000;
+        const posArray = new Float32Array(particlesCount * 3);
+
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 30;
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.03,
+            color: 0x00ffff,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending,
+        });
+
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        camera.position.z = 15;
+
+        let mouseX = 0;
+        let mouseY = 0;
+
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            particlesMesh.rotation.x += 0.0005;
+            particlesMesh.rotation.y += 0.0005;
+
+            particlesMesh.rotation.x += mouseY * 0.0005;
+            particlesMesh.rotation.y += mouseX * 0.0005;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        const inputEditor = CodeMirror(document.getElementById("input-editor"), {
+            mode: "javascript", 
+            lineNumbers: true,
+            theme: "monokai",
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            indentUnit: 4,
+            tabSize: 4,
+            indentWithTabs: false,
+            lineWrapping: true
+        });
+
+        const outputEditor = CodeMirror(document.getElementById("output-editor"), {
+            mode: "python",
+            lineNumbers: true,
+            theme: "monokai",
+            readOnly: true
+        });
+
+        const statusBar = document.getElementById("status-bar");
+        const apiKeyInput = document.getElementById("api-key-input");
+        const apiKeyModal = document.getElementById("api-key-modal");
+        const runResultModal = document.getElementById("run-result-modal");
+        const languageModal = document.getElementById("language-modal");
+        const runResult = document.getElementById("run-result");
+        const toggleViewBtn = document.getElementById("toggle-view");
+        const toggleApiKeyBtn = document.getElementById("toggle-api-key");
+        const downloadInputBtn = document.getElementById("download-input");
+        const downloadOutputBtn = document.getElementById("download-output");
+        const saveApiKeyBtn = document.getElementById("save-api-key");
+        const closeApiKeyBtn = document.getElementById("close-api-key");
+        const closeRunResultBtn = document.getElementById("close-run-result");
+        const toggleApiKeyVisibilityBtn = document.getElementById("toggle-api-key-visibility");
+        const convertBtn = document.getElementById("convert-btn");
+        const runCodeBtn = document.getElementById("run-code");
+        const stopCodeBtn = document.getElementById("stop-code");
+        const languageSelect = document.getElementById("language-select");
+        const toggleLanguageBtn = document.getElementById("toggle-language");
+        const saveLanguageBtn = document.getElementById("save-language");
+        const closeLanguageBtn = document.getElementById("close-language");
+
+        let currentView = 'input';
+        let apiKey = '';
+        let apiKeyVisible = false;
+        let codeExecutionController = null;
+        let currentLanguage = 'python';
+
+        function updateStatus(message) {
+            statusBar.textContent = message;
+        }
+
+        toggleViewBtn.addEventListener("click", () => {
+            if (currentView === 'input') {
+                document.getElementById("input-editor").style.opacity = 0;
+                document.getElementById("input-editor").style.pointerEvents = "none";
+                document.getElementById("output-editor").style.opacity = 1;
+                document.getElementById("output-editor").style.pointerEvents = "auto";
+                currentView = 'output';
+                toggleViewBtn.textContent = "SI";
+                toggleViewBtn.title = "Show Input";
+            } else {
+                document.getElementById("input-editor").style.opacity = 1;
+                document.getElementById("input-editor").style.pointerEvents = "auto";
+                document.getElementById("output-editor").style.opacity = 0;
+                document.getElementById("output-editor").style.pointerEvents = "none";
+                currentView = 'input';
+                toggleViewBtn.textContent = "SO";
+                toggleViewBtn.title = "Show Output";
+            }
+        });
+
+        toggleApiKeyBtn.addEventListener("click", () => {
+            apiKeyModal.style.display = apiKeyModal.style.display === "none" ? "block" : "none";
+        });
+
+        toggleApiKeyVisibilityBtn.addEventListener("click", () => {
+            apiKeyVisible = !apiKeyVisible;
+            apiKeyInput.type = apiKeyVisible ? "text" : "password";
+            toggleApiKeyVisibilityBtn.textContent = apiKeyVisible ? "Hide API Key" : "Show API Key";
+        });
+
+        saveApiKeyBtn.addEventListener("click", () => {
+            apiKey = apiKeyInput.value;
+            apiKeyModal.style.display = "none";
+            updateStatus("API Key saved.");
+        });
+
+        closeApiKeyBtn.addEventListener("click", () => {
+            apiKeyModal.style.display = "none";
+        });
+
+        closeRunResultBtn.addEventListener("click", () => {
+            runResultModal.style.display = "none";
+        });
+
+        toggleLanguageBtn.addEventListener("click", () => {
+            languageModal.style.display = languageModal.style.display === "none" ? "block" : "none";
+        });
+
+        saveLanguageBtn.addEventListener("click", () => {
+            currentLanguage = languageSelect.value;
+            languageModal.style.display = "none";
+            updateStatus(`Language set to ${currentLanguage}`);
+        });
+
+        closeLanguageBtn.addEventListener("click", () => {
+            languageModal.style.display = "none";
+        });
+
+        function downloadCode(editor, filename) {
+            const code = editor.getValue();
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        downloadInputBtn.addEventListener("click", () => downloadCode(inputEditor, 'input_code.txt'));
+        downloadOutputBtn.addEventListener("click", () => downloadCode(outputEditor, `output_code.${getFileExtension(currentLanguage)}`));
+
+        async function convertCode() {
+            if (!apiKey) {
+                updateStatus("Please enter your Gemini API key.");
+                apiKeyModal.style.display = "block";
+                return;
+            }
+            const inputCode = inputEditor.getValue().trim();
+            let prompt;
+
+            if (inputCode.startsWith('say ')) {
+                // Handle simple "say" commands
+                const message = inputCode.substring(4).trim().replace(/^["']|["']$/g, '');
+                prompt = `Generate HTML that displays the message "${message}" in a visually appealing way. Use appropriate HTML tags and inline CSS for styling.`;
+            } else if (currentLanguage === 'web') {
+                prompt = `Convert the following custom syntax to a single HTML file containing HTML, CSS, and JavaScript:\n\n${inputCode}\n\nProvide only the converted HTML file without any explanations. The HTML file should include internal <style> and <script> tags for CSS and JavaScript respectively.`;
+            } else {
+                prompt = `Convert the following custom syntax to valid ${currentLanguage} code:\n\n${inputCode}\n\nProvide only the converted ${currentLanguage} code without any explanations.`;
+            }
+
+            updateStatus("Converting...");
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const data = await response.json();
+                console.log("API Response:", data);
+
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].text) {
+                    const convertedCode = data.candidates[0].content.parts[0].text;
+                    outputEditor.setValue(convertedCode);
+                    outputEditor.setOption("mode", getCodeMirrorMode(currentLanguage));
+                    updateStatus(`Language converted to ${currentLanguage}`);
+                    toggleViewBtn.click();
+                } else if (data.error) {
+                    throw new Error(`API Error: ${data.error.message}`);
+                } else {
+                    throw new Error("Unexpected response format");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                updateStatus(`Error: ${error.message}`);
+                outputEditor.setValue("An error occurred. Please check the status messages for details.");
+            }
+        }
+
+        convertBtn.addEventListener('click', convertCode);
+
+        async function runCode() {
+            if (!apiKey) {
+                updateStatus("Please enter your Gemini API key.");
+                apiKeyModal.style.display = "block";
+                return;
+            }
+
+            const code = currentView === 'input' ? inputEditor.getValue() : outputEditor.getValue();
+            const prompt = `Execute the following ${currentLanguage} code and return only the output:\n\n${code}\n\nIf there are any errors, return the error message.`;
+
+            updateStatus("Running code...");
+            runCodeBtn.style.display = "none";
+            stopCodeBtn.style.display = "inline-flex";
+
+            try {
+                codeExecutionController = new AbortController();
+                const signal = codeExecutionController.signal;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    }),
+                    signal: signal
+                });
+
+                const data = await response.json();
+                console.log("API Response:", data);
+
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].text) {
+                    const result = data.candidates[0].content.parts[0].text;
+                    runResult.textContent = result;
+                    runResultModal.style.display = "block";
+                    updateStatus("Code execution completed");
+                } else if (data.error) {
+                    throw new Error(`API Error: ${data.error.message}`);
+                } else {
+                    throw new Error("Unexpected response format");
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.log('Code execution was stopped');
+                    updateStatus("Code execution stopped");
+                    runResult.textContent = "Code execution was stopped.";
+                } else {
+                    console.error("Error:", error);
+                    updateStatus(`Error: ${error.message}`);
+                    runResult.textContent = `An error occurred: ${error.message}`;
+                }
+                runResultModal.style.display = "block";
+            } finally {
+                runCodeBtn.style.display = "inline-flex";
+                stopCodeBtn.style.display = "none";
+                codeExecutionController = null;
+            }
+        }
+
+        runCodeBtn.addEventListener('click', runCode);
+
+        function stopCode() {
+            if (codeExecutionController) {
+                codeExecutionController.abort();
+                updateStatus("Stopping code execution...");
+            }
+        }
+
+        stopCodeBtn.addEventListener('click', stopCode);
+
+        function getCodeMirrorMode(language) {
+            switch (language) {
+                case 'python': return 'python';
+                case 'web': return 'htmlmixed';
+                case 'java': return 'text/x-java';
+                case 'cpp': return 'text/x-c++src';
+                case 'csharp': return 'text/x-csharp';
+                case 'ruby': return 'ruby';
+                case 'go': return 'go';
+                case 'php': return 'php';
+                case 'rust': return 'rust';
+                case 'swift': return 'swift';
+                case 'kotlin': return 'text/x-kotlin';
+                default: return 'javascript';
+            }
+        }
+
+        function getFileExtension(language) {
+            switch (language) {
+                case 'python': return 'py';
+                case 'web': return 'html';
+                case 'java': return 'java';
+                case 'cpp': return 'cpp';
+                case 'csharp': return 'cs';
+                case 'ruby': return 'rb';
+                case 'go': return 'go';
+                case 'php': return 'php';
+                case 'rust': return 'rs';
+                case 'swift': return 'swift';
+                case 'kotlin': return 'kt';
+                default: return 'txt';
+            }
+        }
+
+        
+        inputEditor.setOption("mode", getCodeMirrorMode(currentLanguage));
+
+        
+        languageSelect.addEventListener('change', () => {
+            currentLanguage = languageSelect.value;
+            inputEditor.setOption("mode", getCodeMirrorMode(currentLanguage));
+        });
+
+        updateStatus("Ready");
+    </script>
+</body>
+</html>
